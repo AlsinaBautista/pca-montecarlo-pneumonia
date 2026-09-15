@@ -134,6 +134,12 @@ _TODO._
 
 _TODO._
 
+### Stability of the Monte Carlo estimates
+
+![Running estimates for p = 0.35](figures/monte_carlo_convergence.png)
+
+The curves show how the estimated mean accuracy and loss probability change as more simulations are included.
+
 ## Conclusions
 
 _TODO: key takeaways about PCA as a compression tool, the robustness of the classifier, and the role of the Law of Large Numbers in the Monte Carlo estimates._
