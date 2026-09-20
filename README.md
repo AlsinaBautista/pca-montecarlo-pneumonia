@@ -97,43 +97,29 @@ jupyter
 
 ## Results
 
-<!-- Replace the placeholders with your figures and a short interpretation of each. -->
-
 ### Test set in the first two principal components
 
 ![PCA scatter](figures/pca_scatter.png)
-
-_TODO: comment on class separability._
 
 ### Accuracy vs. number of components
 
 ![Accuracy vs K](figures/accuracy_vs_k.png)
 
-_TODO: baseline accuracy, how many components are needed, observed trend._
-
 ### Effect of random rotations on the PCA space
 
 ![Perturbed scatters](figures/perturbed_scatter.png)
-
-_TODO: what happens to rotated images in the projected space._
 
 ### Expected accuracy vs. rotation probability
 
 ![E[A_p]](figures/expected_accuracy_vs_p.png)
 
-_TODO._
-
 ### Probability of exceeding the loss tolerance
 
 ![P(L > δ)](figures/loss_probability_vs_p.png)
 
-_TODO._
-
 ### Accuracy distributions
 
 ![Histograms](figures/accuracy_histograms.png)
-
-_TODO._
 
 ### Stability of the Monte Carlo estimates
 
@@ -141,14 +127,11 @@ _TODO._
 
 The curves show how the estimated mean accuracy and loss probability change as more simulations are included.
 
-## Conclusions
-
-_TODO: key takeaways about PCA as a compression tool, the robustness of the classifier, and the role of the Law of Large Numbers in the Monte Carlo estimates._
-
 ## Authors
 
 - Bautista Alsina
-- _TODO: teammates_
+- Santos Bunge
+- Hans Dietrich
 
 ## References
 
