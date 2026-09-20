@@ -198,7 +198,7 @@ valores del orden de los miles porque en este cuaderno usamos los píxeles sin n
 
 \subsection{Accuracy en función de la cantidad de componentes}
 
-Para cada $K$ entre 1 y 100 proyectamos ambos conjuntos, entrenamos una regresión logística nueva (la
+Para cada $K$ entre 1 y 300 proyectamos ambos conjuntos, entrenamos una regresión logística nueva (la
 cantidad de entradas cambia con $K$) y medimos su \acc{}. Elegimos este rango porque muestra tanto el
 comportamiento con muy pocas componentes como la tendencia para valores grandes de $K$. Los resultados se
 presentan en la Figura~\ref{fig:acck} y en la Tabla~\ref{tab:acck}.
@@ -226,12 +226,12 @@ presentan en la Figura~\ref{fig:acck} y en la Tabla~\ref{tab:acck}.
   \caption{Varianza explicada acumulada y \emph{accuracy} sobre el conjunto de prueba para algunos valores
            de $K$. Sin PCA, el \emph{accuracy} es 0.818.}
   \label{tab:acck}
-  \begin{tabular}{lcccccccc}
+  \begin{tabular}{lcccccccccc}
     \toprule
-    $K$ & 1 & 2 & 3 & 5 & 10 & 20 & 50 & 100 \\
+    $K$ & 1 & 2 & 3 & 5 & 10 & 20 & 50 & 100 & 200 & 300 \\
     \midrule
-    Varianza acumulada & 28.3\,\% & 38.4\,\% & 44.7\,\% & 54.0\,\% & 66.0\,\% & 75.5\,\% & 83.9\,\% & 88.7\,\% \\
-    \emph{Accuracy}    & 0.596 & 0.803 & 0.829 & \textbf{0.857} & 0.808 & 0.825 & 0.829 & 0.831 \\
+    Varianza acumulada & 28.3\,\% & 38.4\,\% & 44.7\,\% & 54.0\,\% & 66.0\,\% & 75.5\,\% & 83.9\,\% & 88.7\,\% & 93.1\,\% & 95.2\,\% \\
+    \emph{Accuracy}    & 0.596 & 0.803 & 0.829 & \textbf{0.857} & 0.808 & 0.825 & 0.829 & 0.831 & 0.812 & 0.786 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -239,9 +239,11 @@ presentan en la Figura~\ref{fig:acck} y en la Tabla~\ref{tab:acck}.
 Con $K=1$ el \acc{} es 0.596, apenas mayor que el azar, lo que concuerda con que la primera componente no
 separa las clases. Con $K=2$ sube a 0.803, gracias a la segunda componente. Con $K=3$ ya se supera la línea
 de base (0.829), y con $K=5$ se alcanza el máximo del rango estudiado, 0.857 (401 aciertos). Es decir, con
-solo 5 números por imagen el clasificador funciona mejor que con los 16384 píxeles. Para $K$ mayor a 20,
-aproximadamente, la curva oscila entre 0.80 y 0.845 alrededor de la línea de base sin una tendencia de
-mejora, por lo que agregar componentes de baja varianza no aporta información útil. Las oscilaciones entre
+solo 5 números por imagen el clasificador funciona mejor que con los 16384 píxeles. Entre $K\approx20$ y
+$K\approx180$ la curva oscila entre 0.80 y 0.85 alrededor de la línea de base sin una tendencia de mejora,
+y a partir de $K\approx190$ queda por debajo de ella y desciende de forma sostenida hasta 0.786 en $K=300$:
+agregar componentes de baja varianza no aporta información útil y, con 2428 muestras de entrenamiento,
+suma parámetros que terminan perjudicando la generalización. Las oscilaciones entre
 valores cercanos de $K$, como el pico en $K=12$ y $K=13$, corresponden a diferencias de pocas imágenes (0.02
 equivale a unas 9), por lo que no les dimos importancia individualmente.
 

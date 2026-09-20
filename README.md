@@ -29,7 +29,7 @@ The images come from [PneumoniaMNIST](https://medmnist.com/) (MedMNIST+, 128×12
 | Train | 2,428 | 1,214 / 1,214 |
 | Test | 468 | 234 / 234 |
 
-The dataset is **not included** in this repository. To run the notebooks, place it in the project root with this structure:
+The dataset is **not included** in this repository. To run the notebook, place it in the project root with this structure:
 
 ```
 dataset_tp1/
@@ -67,9 +67,10 @@ With the PCA (*K* = 2) + logistic regression pipeline trained once on unperturbe
 
 ```
 .
-├── ej1_pca.ipynb            # PCA, projections and accuracy vs. K
-├── ej2_montecarlo.ipynb     # Monte Carlo robustness analysis
-├── figures/                 # Plots used in this README
+├── notebooks/
+│   └── TP1_pca_montecarlo.ipynb   # Exercise 1 (PCA, accuracy vs. K) + Exercise 2 (Monte Carlo)
+├── report/                  # LaTeX report
+├── figures/                 # Plots used in the report and this README
 ├── requirements.txt
 └── README.md
 ```
@@ -80,7 +81,7 @@ With the PCA (*K* = 2) + logistic regression pipeline trained once on unperturbe
 git clone https://github.com/<your-user>/pca-montecarlo-pneumonia.git
 cd pca-montecarlo-pneumonia
 pip install -r requirements.txt
-jupyter notebook
+jupyter notebook notebooks/TP1_pca_montecarlo.ipynb
 ```
 
 `requirements.txt`:
