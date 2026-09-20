@@ -28,7 +28,7 @@
 \newcommand{\grupo}{1}
 \newcommand{\legajoAlsina}{370833}
 \newcommand{\legajoBunge}{370842}
-\newcommand{\legajoDietrich}{XXXXX}
+\newcommand{\legajoDietrich}{370913}
 \newcommand{\profesores}{Copa, Débora; Carducci, Leonardo; García Gulisano Pau}
 % ------------------------------------------------------------------
 
@@ -242,9 +242,13 @@ separa las clases. Con $K=2$ sube a 0.803, gracias a la segunda componente. Con 
 de base (0.829), y con $K=5$ se alcanza el máximo del rango estudiado, 0.857 (401 aciertos). Es decir, con
 solo 5 números por imagen el clasificador funciona mejor que con los 16384 píxeles. Entre $K\approx20$ y
 $K\approx180$ la curva oscila entre 0.80 y 0.85 alrededor de la línea de base sin una tendencia de mejora,
-y a partir de $K\approx190$ queda por debajo de ella y desciende de forma sostenida hasta 0.786 en $K=300$:
-agregar componentes de baja varianza no aporta información útil y, con 2428 muestras de entrenamiento,
-suma parámetros que terminan perjudicando la generalización. Las oscilaciones entre
+y a partir de $K\approx190$ queda por debajo de ella y desciende hasta 0.786 en $K=300$. Esta caída es
+transitoria: las componentes de ese tramo explican poca varianza y, estimadas con solo 2428 imágenes,
+son en gran parte ruido que la regresión ajusta sin ganar información sobre la clase (sobreajuste).
+Al seguir agregando componentes, las nuevas tienen varianza tan chica que el modelo casi no las usa y
+el \acc{} vuelve a subir: 0.808 con $K=500$, 0.816 con $K=1000$ y 0.823 con $K=2427$ (todas las
+componentes). En ese último caso PCA es solo una rotación de los datos centrados y el clasificador
+coincide, salvo 2 imágenes, con el de la imagen completa. Las oscilaciones entre
 valores cercanos de $K$, como el pico en $K=12$ y $K=13$, corresponden a diferencias de pocas imágenes (0.02
 equivale a unas 9), por lo que no les dimos importancia individualmente.
 
