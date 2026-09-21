@@ -1,7 +1,6 @@
 % =====================================================================
 %  Informe TP N.º 1 - I206 Inferencia y Estimación - UdeSA
-%  COMPLETAR antes de entregar: número de grupo, legajos y profesores
-%  (ver los comandos \grupo, \legajo... y \profesores más abajo).
+%  Grupo 01. Cifras verificadas mediante la ejecución completa del notebook.
 %  Compilar desde esta carpeta: las figuras se leen de ../figures/
 % =====================================================================
 \documentclass[11pt,a4paper]{article}
@@ -16,6 +15,7 @@
 \usepackage[a4paper,margin=2.2cm]{geometry}
 \usepackage{booktabs}
 \usepackage{float}
+\usepackage{placeins}
 \usepackage[font=small,labelfont=bf,skip=4pt]{caption}
 \usepackage{enumitem}
 \usepackage{fancyhdr}
@@ -24,7 +24,7 @@
 
 \graphicspath{{../figures/}}
 
-% ---------------------- Datos para completar ----------------------
+% ---------------------- Datos del grupo ---------------------------
 \newcommand{\grupo}{1}
 \newcommand{\legajoAlsina}{370833}
 \newcommand{\legajoBunge}{370842}
@@ -38,6 +38,8 @@
 \newcommand{\acc}{\emph{accuracy}}
 
 \setlength{\parskip}{0.25em}
+\clubpenalty=10000
+\widowpenalty=10000
 \setlist{itemsep=0.15em, topsep=0.25em}
 \setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
 \setlength{\floatsep}{8pt plus 2pt minus 2pt}
@@ -85,17 +87,16 @@
 
 % =====================================================================
 \section*{Resumen}
-% =====================================================================
-En este trabajo usamos el Análisis de Componentes Principales (PCA) para reducir la dimensión de
-radiografías de tórax y evaluamos, con un clasificador de regresión logística, cuánta información útil se
-conserva para distinguir pacientes sanos de pacientes con neumonía. Con las imágenes completas (16384
-píxeles) el clasificador obtuvo un \acc{} de 0.818. Con solo 3 componentes principales se alcanzó el mismo
-desempeño, y con 5 se llegó a 0.857. Luego estudiamos con simulaciones de Monte Carlo qué ocurre si las
-imágenes de prueba se rotan 180° con probabilidad $p$. El \acc{} medio disminuye linealmente con $p$, y la
-probabilidad de perder más de 0.1 de \acc{} es nula para $p \le 0.20$ y supera 0.97 para $p \ge 0.45$.
-Finalmente, justificamos los estimadores utilizados con la Ley de los Grandes Números.
+En este trabajo se estudia la reducción de dimensionalidad de radiografías de tórax mediante Análisis de
+Componentes Principales (PCA) y su efecto sobre la clasificación de imágenes normales y con neumonía. Se
+implementa PCA mediante la descomposición en valores singulares y se evalúa una regresión logística al
+conservar distintas cantidades de componentes. Los resultados obtenidos muestran que representaciones de
+baja dimensión pueden alcanzar un desempeño comparable al de las imágenes completas. Luego se analiza,
+mediante simulaciones Monte Carlo, la robustez del sistema frente a rotaciones aleatorias de las imágenes
+de prueba, y se observa que el desempeño baja a medida que aumenta la probabilidad de rotación. Finalmente,
+se justifica la estimación de la probabilidad de pérdida mediante la Ley de los Grandes Números y se
+discuten los alcances y las limitaciones del análisis.
 
-% =====================================================================
 \section{Introducción}
 % =====================================================================
 Una radiografía digital de $128\times128$ píxeles puede verse como un vector de 16384 números, uno por
@@ -108,7 +109,7 @@ esa representación conserva la información importante, usamos un clasificador 
 que decide si una radiografía corresponde a un paciente sano o con neumonía, y comparamos su \acc{}
 (proporción de aciertos) con y sin PCA.
 
-En la segunda parte analizamos qué tan robusto es este sistema si algunas imágenes llegan rotadas 180°.
+En la segunda parte analizamos qué tan robusto es este sistema si algunas imágenes llegan rotadas $180^\circ$.
 Como no se sabe de antemano cuáles llegarán rotadas, tratamos la situación como un experimento aleatorio y
 la estudiamos con simulaciones de Monte Carlo, es decir, repitiendo el experimento muchas veces con sorteos
 independientes y resumiendo los resultados. La Ley de los Grandes Números es la que justifica que esos
@@ -159,38 +160,60 @@ donde cada fila de $Z$ contiene las $K$ coordenadas de una imagen. Las decisione
         cualquier imagen.
 \end{itemize}
 
-\paragraph{Clasificador y métrica.} Usamos la regresión logística de \emph{scikit-learn}~\cite{sklearn} con
-un máximo de 2000 iteraciones, para que el ajuste tenga pasos suficientes para converger, y dejamos el resto
-de los parámetros en sus valores por defecto. No analizamos su funcionamiento interno~\cite{mahmood}, ya que
-lo usamos solo como herramienta de comparación. Siempre entrenamos con el conjunto de entrenamiento y
-medimos el \acc{} sobre las 468 imágenes de prueba. Cada acierto modifica el \acc{} en $1/468\approx0.002$,
-así que una diferencia de 0.01 equivale a unas 5 imágenes. Tener en cuenta esta escala nos ayudó a no
-sobreinterpretar diferencias pequeñas.
+\paragraph{Clasificador y métrica.} Como indica la consigna, usamos la regresión logística de
+\emph{scikit-learn} solo como herramienta para medir cuánta información conserva cada
+representación, sin analizar su funcionamiento interno~\cite{mahmood}. Mantuvimos su configuración por
+defecto (regularización $L_2$, $C=1$, tolerancia $10^{-4}$) y modificamos únicamente el número máximo de
+iteraciones, por los motivos que se explican a continuación.
 
-\paragraph{Organización del código.} El código está en dos cuadernos de Jupyter, uno por ejercicio
-práctico. En el primero dividimos el trabajo en funciones cortas con una sola tarea cada una: leer imágenes
-y etiquetas, vectorizarlas, entrenar y evaluar el clasificador, calcular PCA, proyectar y recorrer valores
-de $K$. Esto nos permitió reutilizarlas en todos los incisos. El segundo cuaderno carga los datos y entrena
-el modelo por su cuenta, de modo que puede ejecutarse de forma independiente. Ambos usan NumPy~\cite{numpy}
-y guardan las figuras en una carpeta común.
+\paragraph{Convergencia del ajuste.} Empezamos con el máximo de 2000 iteraciones del ejemplo de la
+consigna. Con ese valor, 21 de los 300 ajustes del barrido lo agotan sin alcanzar la tolerancia y
+\emph{scikit-learn} emite la advertencia correspondiente (\texttt{ConvergenceWarning}): son los $K$ entre
+204 y 229, salvo 205, 206, 212, 226 y 227. Fuimos probando entonces con límites cada vez mayores y la
+cantidad de ajustes afectados fue bajando, pero siempre quedaron siete sin converger: los $K$ entre 218 y
+224 no alcanzan la tolerancia por más que se aumente el límite, incluso con valores mucho mayores que los
+que usamos. No identificamos la causa de ese comportamiento, y resolverlo implicaría usar otras
+herramientas, algo que queda fuera del alcance de este trabajo.
 
-% =====================================================================
+Fijamos entonces $\texttt{max\_iter}=20000$ para todo el barrido, con el que solo quedan esos siete casos,
+y dejamos anotado cuáles son. Para medir su efecto los comparamos con ajustes equivalentes que sí
+llegan a converger: cuatro dan exactamente el mismo \acc{} y los otros tres difieren en 2, 2 y 6 imágenes
+sobre 468 ($K=221$, $222$ y $223$), es decir como máximo 0.013 de \acc{}. El ajuste con las imágenes
+completas converge en 89 iteraciones y el del Ejercicio 2, con $K=2$, en 11, de modo que ninguno de los dos
+depende de este límite y el segundo conserva el valor de 2000 del ejemplo. Además, ningún $K$ de los que
+reportamos en las tablas, en el máximo del barrido o en las conclusiones (Sección~\ref{sec:concl}) cae
+entre 218 y 224. La falta de convergencia queda así limitada a un tramo corto de la curva de la
+Figura~\ref{fig:acck} y no cambia los resultados del trabajo de forma importante.
+
+Entrenamos con train y medimos el \acc{} sobre las 468 imágenes de test. Cada acierto
+modifica el \acc{} en $1/468\approx0.002$, de modo que una diferencia de 0.01 equivale a unas 5 imágenes.
+El barrido de $K$ sobre test es descriptivo, como solicita la consigna: el máximo observado no es una
+estimación independiente del desempeño de un $K$ seleccionado. Para elegir $K$ para un uso posterior
+habría que validar dentro del conjunto de entrenamiento y reservar test para la evaluación final.
+
+\paragraph{Organización del código.} El código se presenta en un único cuaderno de Jupyter, organizado
+en dos partes correspondientes a los ejercicios 1 y 2. Se definieron funciones para cargar y vectorizar
+las imágenes, ajustar PCA, proyectar los datos y entrenar y evaluar el clasificador. En la segunda parte
+se realiza la simulación Monte Carlo. El cuaderno debe ejecutarse en orden desde el inicio y guarda las
+figuras que se incluyen en este informe; los valores numéricos que citamos son los que imprime en sus
+salidas. La descomposición en valores singulares y las operaciones con matrices se resuelven con
+NumPy.
+
 \section{Ejercicio 1: PCA y clasificación}
 % =====================================================================
 \subsection{Clasificador con las imágenes completas}
 
 Entrenamos la regresión logística con los 16384 píxeles de cada imagen (valores entre 0 y 255) y obtuvimos
-un \acc{} de \textbf{0.818} (383 aciertos de 468), que usamos como línea de base. En este caso el modelo
-ajusta un peso por píxel, es decir, 16384 parámetros, con solo 2428 imágenes de entrenamiento. Cuando hay
-muchos más parámetros que ejemplos, el modelo puede aprender detalles propios de las imágenes de
-entrenamiento que no se repiten en imágenes nuevas. Este fenómeno se conoce como \emph{sobreajuste} y lo
-retomamos más adelante.
+un \acc{} de \textbf{0.818} (383 aciertos de 468), que usamos como línea de base. El modelo ajusta
+un peso por píxel y un intercepto con 2428 imágenes de entrenamiento. Esta alta dimensión motiva estudiar
+representaciones más pequeñas, pero la relación entre número de parámetros y muestras no demuestra por
+sí sola la existencia de sobreajuste, especialmente cuando se utiliza regularización.
 
 \subsection{Proyección sobre las dos primeras componentes}
 
 La Figura~\ref{fig:scatter} muestra las imágenes de prueba proyectadas sobre las dos primeras componentes
 calculadas con el conjunto de entrenamiento. Sobre la componente 1 (eje horizontal) ambas clases ocupan casi
-todo el rango, por lo que esta coordenada sola no permite distinguirlas. Sobre la componente 2 (eje
+todo el rango, por lo que esta coordenada sola tiene una capacidad de discriminación limitada. Sobre la componente 2 (eje
 vertical), en cambio, las imágenes normales tienden a tomar valores positivos y las de neumonía, negativos.
 La separación no es perfecta: cerca de cero se mezclan puntos de ambas clases, por lo que cualquier frontera
 recta va a cometer errores, lo que es coherente con el \acc{} de 0.803 obtenido con $K=2$. Los ejes llegan a
@@ -207,14 +230,14 @@ presentan en la Figura~\ref{fig:acck} y en la Tabla~\ref{tab:acck}.
   \centering
   \begin{minipage}[t]{0.47\textwidth}\vspace{0pt}
     \centering
-    \includegraphics[height=5.6cm]{pca_scatter.png}
+    \includegraphics[width=\linewidth]{pca_scatter.png}
     \caption{Conjunto de prueba proyectado sobre las dos primeras componentes principales
              (azul: Normal; rojo: Neumonía).}
     \label{fig:scatter}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.51\textwidth}\vspace{0pt}
     \centering
-    \includegraphics[height=5.6cm]{accuracy_vs_k.png}
+    \includegraphics[width=\linewidth]{accuracy_vs_k.png}
     \caption{\emph{Accuracy} de PCA+LR en función de $K$ y \emph{accuracy} con la imagen completa
              (línea punteada).}
     \label{fig:acck}
@@ -232,31 +255,23 @@ presentan en la Figura~\ref{fig:acck} y en la Tabla~\ref{tab:acck}.
     $K$ & 1 & 2 & 3 & 5 & 10 & 20 & 50 & 100 & 200 & 300 \\
     \midrule
     Varianza acumulada & 28.3\,\% & 38.4\,\% & 44.7\,\% & 54.0\,\% & 66.0\,\% & 75.5\,\% & 83.9\,\% & 88.7\,\% & 93.1\,\% & 95.2\,\% \\
-    \emph{Accuracy}    & 0.596 & 0.803 & 0.829 & \textbf{0.857} & 0.808 & 0.825 & 0.829 & 0.831 & 0.812 & 0.786 \\
+    \emph{Accuracy}    & 0.596 & 0.803 & 0.829 & \textbf{0.857} & 0.808 & 0.825 & 0.829 & 0.831 & 0.812 & 0.784 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Con $K=1$ el \acc{} es 0.596, apenas mayor que el azar, lo que concuerda con que la primera componente no
-separa las clases. Con $K=2$ sube a 0.803, gracias a la segunda componente. Con $K=3$ ya se supera la línea
-de base (0.829), y con $K=5$ se alcanza el máximo del rango estudiado, 0.857 (401 aciertos). Es decir, con
-solo 5 números por imagen el clasificador funciona mejor que con los 16384 píxeles. Entre $K\approx20$ y
-$K\approx180$ la curva oscila entre 0.80 y 0.85 alrededor de la línea de base sin una tendencia de mejora,
-y a partir de $K\approx190$ queda por debajo de ella y desciende hasta 0.786 en $K=300$. Esta caída es
-transitoria: las componentes de ese tramo explican poca varianza y, estimadas con solo 2428 imágenes,
-son en gran parte ruido que la regresión ajusta sin ganar información sobre la clase (sobreajuste).
-Al seguir agregando componentes, las nuevas tienen varianza tan chica que el modelo casi no las usa y
-el \acc{} vuelve a subir: 0.808 con $K=500$, 0.816 con $K=1000$ y 0.823 con $K=2427$ (todas las
-componentes). En ese último caso PCA es solo una rotación de los datos centrados y el clasificador
-coincide, salvo 2 imágenes, con el de la imagen completa. Las oscilaciones entre
-valores cercanos de $K$, como el pico en $K=12$ y $K=13$, corresponden a diferencias de pocas imágenes (0.02
-equivale a unas 9), por lo que no les dimos importancia individualmente.
+Con $K=1$ el \acc{} es 0.596: esta componente discrimina menos que el par formado por las dos primeras.
+Con $K=2$ sube a 0.803 y con $K=3$ supera la línea de base: 0.829 frente a 0.818. El máximo observado entre
+1 y 300 componentes corresponde a $K=5$ y es 0.857 (401 aciertos). Así, en este conjunto de
+prueba unas pocas coordenadas permiten obtener un desempeño superior al de la representación completa.
+La curva no es monótona: para valores intermedios oscila alrededor de la referencia y luego desciende,
+hasta 0.784 con $K=300$. Estas variaciones describen los ajustes evaluados y no prueban que las
+componentes de baja varianza sean ruido ni que la caída se deba exclusivamente al sobreajuste. Además, en
+el tramo $218\le K\le224$ se mezclan con el efecto de los siete ajustes que no llegan a converger, por lo que
+ese tramo de la curva debe leerse con esa aclaración.
 
-Que pocas componentes superen a la imagen completa puede parecer contradictorio, ya que al proyectar se
-descarta información. Una posible explicación es que lo descartado son sobre todo detalles de baja varianza
-no relacionados con la enfermedad, y que un modelo con pocas entradas tiene muchos menos parámetros y, por
-lo tanto, menos riesgo de sobreajuste. Así, la reducción de dimensión no solo ahorra cómputo, sino que
-también puede ayudar al clasificador a generalizar.
+La mejora con pocas componentes coincide con la idea de que la reducción de dimensión limita el ajuste
+de variaciones poco útiles para esta clasificación, aunque para comprobarlo harían falta más evaluaciones.
 
 \subsection{Análisis complementario: interpretación de las componentes}
 
@@ -267,13 +282,13 @@ graficarse como una imagen de $128\times128$ (Figura~\ref{fig:comp}; rojo: pesos
 negativos). El signo global de cada componente es arbitrario, por lo que lo que se interpreta es el
 contraste entre zonas. La \textbf{PC1} (28.3\,\% de la varianza) tiene todos sus pesos del mismo signo, así
 que mide básicamente el brillo total de la imagen: su correlación con el brillo medio es $-0.98$, y el signo
-negativo solo refleja la elección arbitraria del signo. El brillo depende más de la exposición o del tamaño
-del paciente que de la enfermedad, lo que explica el bajo \acc{} con $K=1$. La \textbf{PC2} (10.1\,\%) tiene
-signos opuestos en los pulmones y en la periferia del tórax, así que mide qué tan claros se ven los pulmones
-respecto del resto. Un pulmón sano se ve oscuro porque está lleno de aire, mientras que la neumonía produce
-zonas opacas, y por eso esta componente separa las clases. Las \textbf{PC3 a PC6} reflejan otros patrones,
-como el brillo de los pulmones en conjunto, el encuadre o asimetrías entre los lados, que no parecen estar
-asociados a la clase.
+negativo solo refleja la elección arbitraria del signo. Esta componente tiene una capacidad de separación
+individual limitada. La \textbf{PC2} (10.1\,\%) presenta signos opuestos en regiones centrales y periféricas
+del tórax. El patrón visual sugiere que representa contrastes de intensidad entre esas zonas, que coinciden
+con diferencias observables entre las clases. Sin embargo, no se midió opacidad pulmonar ni se aislaron
+factores como exposición, tamaño o encuadre; por eso no interpretamos esta componente como una medida
+clínica específica. Las \textbf{PC3 a PC6} muestran otros contrastes espaciales y menor separación
+individual. Esto no impide que aporten información cuando se combinan con otras coordenadas.
 
 \begin{figure}[H]
   \centering
@@ -285,8 +300,7 @@ asociados a la clase.
 \paragraph{Varianza explicada.} La Figura~\ref{fig:var} superpone el \acc{} con la varianza acumulada. Un
 criterio habitual es elegir $K$ de modo de conservar el 90\,\% de la varianza. Aquí eso requeriría 121
 componentes, mientras que la línea de base se alcanza con $K=3$, que conserva solo el 44.7\,\% de la
-varianza. Por lo tanto, para clasificar conviene elegir $K$ según el desempeño del clasificador y no solo
-según la varianza conservada.
+varianza. La varianza conservada y la capacidad de clasificación miden aspectos diferentes.
 
 \begin{figure}[H]
   \centering
@@ -321,14 +335,12 @@ calculamos sobre el conjunto de entrenamiento el cociente de Fisher $F = (m_0-m_
 donde $m_c$ y $\sigma_c^2$ son la media y la varianza de la coordenada en la clase $c$. El numerador mide la
 distancia entre los centros de las clases y el denominador, su dispersión, de modo que un $F$ mayor indica
 una mejor separación. También medimos el \acc{} de una regresión logística entrenada con esa única
-coordenada. La Tabla~\ref{tab:fisher} confirma lo observado. La PC2 es la única componente que separa por sí
-sola: su $F$ es más de seis veces el de la PC1 y al menos veinte veces el de las PC3 a PC6, y alcanza un
-\acc{} de 0.784. En resumen, PCA ordena las direcciones por varianza sin mirar las etiquetas, así que la de
-mayor varianza no tiene por qué ser la más útil para clasificar. En este problema funcionó bien porque la
-opacidad pulmonar resultó ser la segunda fuente de variación más importante, pero eso no está garantizado en
-otros casos.
+coordenada. La Tabla~\ref{tab:fisher} indica que PC2 tiene la mayor separación individual entre las seis componentes
+analizadas: su $F$ es más de seis veces el de PC1 y unas veinte veces el de PC3 a PC6, y alcanza un
+\acc{} de 0.784 por sí sola. PC1 también aporta cierta separación, aunque menor. PCA ordena las
+direcciones por varianza sin utilizar las etiquetas, por lo que la dirección de mayor varianza no tiene
+por qué ser la más útil para clasificar.
 
-% =====================================================================
 \section{Ejercicio 2: robustez frente a rotaciones}
 % =====================================================================
 \subsection{Planteo e implementación}
@@ -340,10 +352,11 @@ obtenido cuando cada imagen se rota con probabilidad $p$, y $L(p) = A_0 - A_p$ e
 de implementación fueron:
 \begin{itemize}
   \item \textbf{Normalización.} Dividimos los píxeles por 255, para que queden entre 0 y 1, porque así el
-        ajuste de la regresión logística converge con más facilidad. Esto solo cambia la escala de las
-        coordenadas (los ejes pasan de miles a decenas), y el \acc{} sin rotaciones no cambia.
+        ajuste de la regresión logística converge con más facilidad. La escala uniforme conserva las direcciones de PCA y reescala sus coordenadas, pero no garantiza
+        que la regresión logística regularizada produzca las mismas predicciones con $C$ fijo. En esta
+        ejecución, el \acc{} sin rotaciones coincidió con el del ejercicio 1 para $K=2$.
   \item \textbf{Rotación y sorteo.} Para rotar una imagen, reacomodamos su vector como matriz de
-        $128\times128$, la giramos dos veces 90° y la volvemos a convertir en vector. Esto equivale a
+        $128\times128$, la giramos dos veces $90^\circ$ y la volvemos a convertir en vector. Esto equivale a
         invertir el orden de los píxeles, así que la rotación es una operación lineal. Para decidir si rotar
         cada imagen generamos $U$ uniforme en $(0,1)$ y la rotamos si $U<p$. Como $\Prob(U<p)=p$, cada
         imagen se rota con probabilidad $p$, de forma independiente de las demás. Usamos una semilla fija
@@ -356,12 +369,12 @@ de implementación fueron:
         $0.5$ y $0.9$. Así evitamos proyectar y clasificar la matriz de prueba en cada una de las 36000
         realizaciones (18 valores de $p$ por 2000 simulaciones).
   \item \textbf{Cantidad de simulaciones.} Elegimos $N_{MC}=2000$ a partir de la desigualdad de Chebyshev
-        (Sección~\ref{sec:ej3}). Con ese valor, el desvío estándar del estimador de una probabilidad es a lo
-        sumo 0.011, y la probabilidad de equivocarse en 0.05 o más es como máximo 0.05.
+        (Sección~\ref{sec:ej3}). Para cada $p$ fijado, el desvío estándar del estimador de probabilidad es a lo
+        sumo 0.0112 y la probabilidad de equivocarse en 0.05 o más es como máximo 0.05.
   \item \textbf{Valores de $p$.} Para los incisos (b) y (c) usamos 18 valores, de 0.05 a 0.90 con paso
-        0.05, para obtener curvas bien definidas. Para (a) y (d) usamos 0.1, 0.3, 0.5, 0.7 y 0.9, para que
-        las figuras se lean con claridad, y en (a) agregamos $p=0$ como referencia. Los histogramas
-        reutilizan las simulaciones de (b) y (c).
+        0.05, para obtener curvas bien definidas. Para (a) usamos 0.1, 0.3, 0.5, 0.7 y 0.9, además de $p=0$ como referencia.
+        En (d) mostramos los histogramas de esos mismos cinco valores, que reutilizan las simulaciones
+        de (b) y (c).
 \end{itemize}
 
 \subsection{Proyección de las imágenes rotadas (inciso a)}
@@ -373,7 +386,7 @@ y diagonal en la parte inferior del gráfico, justo en la zona donde estaban las
 medida que $p$ crece, esa franja concentra más puntos, y con $p = 0.9$ casi desaparecen los círculos azules
 de la parte superior.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=0.86\textwidth]{perturbed_scatter.png}
   \caption{Una realización de las rotaciones para cada $p$, proyectada sobre las dos primeras componentes.
@@ -381,20 +394,22 @@ de la parte superior.
   \label{fig:pert}
 \end{figure}
 
-Nuestra interpretación es la siguiente. Si $R(x)$ es la imagen $x$ rotada, por linealidad se cumple
-$R(x)-\mu = R(x-\mu) + \big(R(\mu)-\mu\big)$. El segundo término es igual para todas las imágenes y es
-grande, porque en la imagen media rotada los hombros quedan abajo y el diafragma arriba. Al proyectarlo se
-obtiene $(-1.7,\,-3.9)$, un desplazamiento común hacia la zona de neumonía. El primer término depende de
-cada imagen, pero las direcciones principales se aprendieron con radiografías derechas: la PC2 compara los
-pulmones con la periferia, y en una imagen invertida esas zonas quedan desalineadas. Por eso, sobre la PC2
-la dispersión se reduce a la mitad (el desvío pasa de 5.6 a 2.8) y la media queda cerca de $-4.2$ para ambas
-clases, es decir, se pierde la información de la clase. En cambio, la PC1, que mide el brillo total, casi no
-cambia al rotar (la correlación entre la coordenada original y la rotada es 0.99), y por eso la franja
-conserva su ancho horizontal. Como consecuencia, al rotar todo el conjunto de prueba el 97.4\,\% de las
-imágenes se clasifica como neumonía (contra un 57.3\,\% sin rotar). El acierto en la clase Neumonía sube de
-0.876 a 0.996, pero en la clase Normal cae de 0.731 a 0.047. El \acc{} con todo el conjunto rotado, al que
-llamamos $A_1$, es 0.521, casi el mismo que el del azar.
+Si $R(x)$ es la imagen $x$ rotada, por linealidad se cumple
+$R(x)-\mu=R(x-\mu)+(R(\mu)-\mu)$. El segundo término es común a todas las imágenes y su proyección vale
+$(-1.7,-3.9)$ en las coordenadas normalizadas. El primero depende de cada imagen y se proyecta sobre
+direcciones aprendidas con radiografías sin rotar. En la ejecución observamos que el desvío de PC2 pasa de
+5.6 a 2.8 y que las medias de las dos clases rotadas quedan cerca de $-4.2$: disminuye la separación de
+sus centros sobre ese eje. PC1, asociada al brillo global, se conserva en mayor medida (la correlación
+entre sus coordenadas antes y después de rotar es 0.99). Esta descomposición ayuda a interpretar la
+franja observada.
 
+Con todo test rotado, el 97.4\,\% de las imágenes se clasifica como neumonía, frente al
+57.3\,\% sin rotar. La proporción de aciertos en Neumonía pasa de 0.876 a 0.996 y en Normal, de
+0.731 a 0.047. El \acc{} con todo el conjunto rotado, llamado $A_1$, es 0.521, próximo a 0.5. Esto
+se debe a que el modelo predice casi siempre la misma clase en un conjunto balanceado; no significa que
+sus decisiones sean aleatorias.
+
+\FloatBarrier
 \subsection{\texorpdfstring{Accuracy medio en función de $p$ (inciso b)}{Accuracy medio en función de p (inciso b)}}
 
 Para cada $p$ estimamos $\E[A_p]$ con el promedio de los 2000 \emph{accuracies} simulados,
@@ -405,22 +420,22 @@ bien cuando está derecha (y 0 si no), y $c_i^{\text{rot}}$ lo mismo cuando est�
 rota con probabilidad $p$, la probabilidad de acertarla es $(1-p)\,c_i^{\text{der}} + p\,c_i^{\text{rot}}$.
 Promediando sobre las 468 imágenes, por linealidad de la esperanza se obtiene
 \[ \E[A_p] = (1-p)\,A_0 + p\,A_1 \approx 0.803 - 0.282\,p . \]
-La Tabla~\ref{tab:mc} compara las estimaciones de Monte Carlo con esta recta. Las diferencias no superan
-0.0004 para ninguno de los 18 valores de $p$, lo que funciona como una verificación independiente de la
+La Tabla~\ref{tab:mc} compara las estimaciones de Monte Carlo con esta recta. Las diferencias son
+menores que 0.0005 para los 18 valores de $p$, lo que funciona como una verificación independiente de la
 simulación.
 
 \begin{figure}[H]
   \centering
   \begin{minipage}[t]{0.54\textwidth}\vspace{0pt}
     \centering
-    \includegraphics[height=4.4cm]{expected_accuracy_vs_p.png}
+    \includegraphics[width=\linewidth]{expected_accuracy_vs_p.png}
     \caption{\emph{Accuracy} medio estimado en función de $p$, junto con $A_0$ (discontinua) y el azar
              (punteada).}
     \label{fig:mean}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.43\textwidth}\vspace{0pt}
     \centering
-    \includegraphics[height=4.4cm]{loss_probability_vs_p.png}
+    \includegraphics[width=\linewidth]{loss_probability_vs_p.png}
     \caption{Probabilidad estimada de que la pérdida supere $\delta = 0.1$, en función de $p$.}
     \label{fig:prob}
   \end{minipage}
@@ -451,24 +466,28 @@ simulación.
 Estimamos $\Prob_p(L(p)>\delta)$, con $\delta=0.1$, como la proporción de simulaciones en las que la pérdida
 superó la tolerancia:
 \[ \widehat{\Prob}_p\big(L(p)>\delta\big) = \frac{1}{N_{MC}}\sum_{i=1}^{N_{MC}}\ind\{L_i(p)>\delta\} . \]
-La condición $L(p)>0.1$ equivale a obtener como máximo 329 aciertos, es decir, al menos 47 menos que sin
-rotaciones. La curva de la Figura~\ref{fig:prob} tiene forma de S. Para $p\le0.20$ ninguna de las 2000
-simulaciones superó la tolerancia; entre $p=0.25$ y $p=0.45$ la probabilidad sube de 0.014 a 0.972, y desde
-$p=0.50$ es prácticamente 1. La probabilidad vale aproximadamente $1/2$ cuando el \acc{} medio coincide con el
-umbral $A_0-\delta$. Según la recta anterior, esto ocurre en $p^*=\delta/(A_0-A_1)=0.1/0.282\approx0.355$, lo
-que coincide con el 0.4985 estimado para $p=0.35$. El cambio es brusco porque el \acc{} de cada realización
-se aleja poco de su media (su desvío es de a lo sumo 0.015): si la media está a dos o tres desvíos del
-umbral, casi ninguna simulación lo cruza, o lo cruzan casi todas. En la práctica, el sistema tolera hasta un
-20--25\,\% de imágenes rotadas sin que la pérdida supere 0.1, pero con un 45\,\% la supera casi siempre.
+La condición $L(p)>0.1$ equivale a obtener como máximo 329 aciertos: al menos 47 menos que sin
+rotaciones. La tolerancia de 0.1 corresponde a diez puntos porcentuales de \acc{}. En los valores de la
+grilla con $p\le0.20$ ninguna de las 2000 simulaciones superó esa tolerancia, pero una frecuencia cero no
+implica que el evento sea imposible. Para $p=0.25$ la frecuencia estimada fue 0.0140; para $p=0.45$, 0.9715,
+y desde $p=0.50$ fue próxima a uno. Por lo tanto, no hay un porcentaje de rotaciones que estos resultados
+permitan declarar libre de riesgo.
+
+La curva tiene forma de S. La media alcanza el umbral $A_0-\delta$ cerca de
+$p^*=\delta/(A_0-A_1)\approx0.355$, lo cual sitúa la transición cerca de $p=0.35$. En ese punto la
+probabilidad estimada es 0.4985. La probabilidad no tiene por qué ser exactamente $1/2$ cuando la media
+coincide con el umbral, porque el \acc{} es discreto y su distribución no es exactamente simétrica.
+La transición es estrecha porque las realizaciones se concentran alrededor de su media: en los casos
+simulados, el desvío estándar es cercano o inferior a 0.015.
 
 \subsection{Distribución del accuracy (inciso d)}
 
-La Figura~\ref{fig:hist} muestra los histogramas de los 2000 \emph{accuracies} para cada $p$. Como el \acc{}
-solo toma valores de la forma $k/468$, usamos un intervalo centrado en cada valor posible, con ancho $1/468$.
+La Figura~\ref{fig:hist} muestra los histogramas del \acc{} para $p=0.1$, $0.3$, $0.5$, $0.7$ y $0.9$,
+con 2000 realizaciones por valor. Como el \acc{} solo toma valores de la forma $k/468$, usamos un intervalo centrado en cada valor posible, con ancho $1/468$.
 Así evitamos que algunos intervalos agrupen dos valores posibles y otros queden vacíos, lo que generaría
 huecos artificiales. Las distribuciones tienen forma de campana y están centradas en la media estimada, que
-se desplaza hacia la izquierda al crecer $p$. Su ancho es máximo en $p=0.5$ y simétrico alrededor de ese
-valor: el desvío es 0.009, 0.013, 0.015, 0.013 y 0.009 para $p = 0.1$, $0.3$, $0.5$, $0.7$ y $0.9$. Esto se
+se desplaza hacia la izquierda al crecer $p$. El ancho teórico es máximo en $p=0.5$ y simétrico alrededor de ese
+valor; los histogramas presentan fluctuaciones muestrales: el desvío es 0.009, 0.013, 0.015, 0.013 y 0.009 para $p = 0.1$, $0.3$, $0.5$, $0.7$ y $0.9$. Esto se
 explica con el mismo razonamiento del inciso (b). Solo influyen las 188 imágenes cuya clasificación cambia al
 rotarlas (160 pasan de acierto a error y 28 de error a acierto), y cada una se rota de forma independiente
 con probabilidad $p$, por lo que
@@ -480,9 +499,9 @@ se aproxima a una normal.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.86\textwidth]{accuracy_histograms.png}
-  \caption{Histogramas del \emph{accuracy} en las 2000 simulaciones para cada $p$. La línea punteada indica
-           la media estimada.}
+  \includegraphics[width=\textwidth]{accuracy_histograms.png}
+  \caption{Histogramas del \emph{accuracy} para $p=0.1,\,0.3,\,0.5,\,0.7$ y $0.9$, con 2000
+           realizaciones por caso. La línea discontinua indica la media estimada.}
   \label{fig:hist}
 \end{figure}
 
@@ -504,7 +523,7 @@ desde unas 1000. Este es el comportamiento que predice la Ley de los Grandes Nú
 \end{figure}
 
 % =====================================================================
-\section{Ejercicio 3: justificación mediante la Ley de los Grandes Números}
+\section{Ejercicio 3: Ley de los Grandes Números}
 \label{sec:ej3}
 % =====================================================================
 Fijado $p$, en cada simulación se hace un sorteo nuevo e independiente de las rotaciones, mientras que el
@@ -535,58 +554,50 @@ para todo $\varepsilon>0$,
 Es decir, con suficientes simulaciones, la probabilidad de que la proporción observada se aleje de la
 probabilidad verdadera en más de $\varepsilon$ es tan pequeña como se quiera. Esto justifica estimar
 $\Prob_p(L(p)>\delta)$ como el promedio de las funciones indicadoras. La Ley Fuerte agrega que $\hat q_N$
-converge a $q$ con probabilidad 1, que es lo que se observa en la Figura~\ref{fig:conv}. Con $N_{MC}=2000$, la
-cota da un desvío de a lo sumo $1/\sqrt{8000}\approx0.011$ y garantiza que
+converge a $q$ con probabilidad 1. La estabilización de la Figura~\ref{fig:conv} es consistente con
+ese resultado, pero una trayectoria finita no demuestra convergencia casi segura. Con $N_{MC}=2000$, la
+cota da un desvío de como máximo $1/\sqrt{8000}\approx0.011$ y garantiza que
 $\Prob(|\hat q_N-q|\ge0.05)\le 1/(8000\cdot 0.05^2) = 0.05$. Esta cota es conservadora porque corresponde al
-peor caso, $q=0.5$. El mismo argumento vale para el estimador de $\E[A_p]$: los $A_{p,i}$ son i.i.d. y toman
+peor caso, $q=0.5$, y vale para cada $p$ fijado, no como una garantía simultánea para toda la grilla.
+El mismo argumento vale para el estimador de $\E[A_p]$: los $A_{p,i}$ son i.i.d. y toman
 valores entre 0 y 1, por lo que su varianza es finita y su promedio converge a $\E[A_p]$. La coincidencia con
-la fórmula exacta en la Tabla~\ref{tab:mc} muestra esta convergencia en la práctica.
+la fórmula exacta en la Tabla~\ref{tab:mc} aporta una comprobación numérica del estimador.
 
 % =====================================================================
 \section{Conclusiones}
-% =====================================================================
-PCA permitió reducir drásticamente la dimensión de las radiografías sin perder capacidad de clasificación.
-Con 3 componentes se igualó el \acc{} de la imagen completa (0.818) y con 5 se llegó a 0.857, posiblemente
-porque un modelo con menos entradas tiene menos riesgo de sobreajuste. También vimos que PCA ordena las
-direcciones por varianza y no por su utilidad para clasificar: la PC1 mide el brillo general y casi no separa
-las clases, mientras que la PC2, relacionada con la opacidad de los pulmones, es la que las distingue.
-Además, conservar el 90\,\% de la varianza habría requerido 121 componentes, muchas más de las necesarias.
+\label{sec:concl}
+En el conjunto de prueba analizado, PCA permitió reducir considerablemente la dimensión manteniendo un
+desempeño comparable al de las imágenes completas. Con tres componentes se obtuvo 0.829 frente a 0.818
+sin PCA, y el máximo del barrido de 1 a 300 componentes fue 0.857 con $K=5$. Conservar el 90\,\%
+de la varianza requirió 121 componentes: maximizar varianza conservada y favorecer la clasificación son
+criterios diferentes. La comparación es descriptiva; no demuestra un $K$ óptimo para datos nuevos ni una
+causa única para las variaciones del desempeño.
 
-El sistema PCA+LR resultó poco robusto frente a rotaciones de 180°. Las imágenes rotadas caen en la región
-asociada a la neumonía y, con todo el conjunto rotado, el \acc{} baja a 0.521. Con Monte Carlo estimamos que
-el \acc{} medio disminuye linealmente con $p$ y que la probabilidad de perder más de 0.1 pasa de casi 0 a casi
-1 entre $p=0.25$ y $p=0.45$. Las estimaciones coincidieron con las fórmulas que dedujimos para la media y la
-varianza del \acc{}. Por su parte, los gráficos de estabilidad y la cota de Chebyshev ilustraron en la
-práctica la Ley de los Grandes Números.
+El sistema con $K=2$ fue sensible a las rotaciones de $180^\circ$: con todas las imágenes rotadas el
+\acc{} fue 0.521 y la mayoría de las predicciones fueron de neumonía. Monte Carlo permitió estimar la disminución del
+\acc{} medio y la probabilidad de una pérdida superior a diez puntos porcentuales. La coincidencia con
+las fórmulas de media y varianza respaldó la implementación. La Ley de los
+Grandes Números justifica la consistencia de los estimadores; una frecuencia observada nula no garantiza
+que el evento sea imposible.
 
-Las principales dificultades que encontramos, y la forma en que las resolvimos, fueron:
-\begin{itemize}
-  \item \textbf{Tamaño de los datos:} la matriz de covarianza de $16384\times16384$ era demasiado grande, así
-        que calculamos PCA con la SVD reducida de la matriz centrada, una sola vez para todos los $K$.
-  \item \textbf{Proyección del conjunto de prueba:} entendimos que $U_KS_K$ solo vale para las imágenes de
-        entrenamiento, y que las de prueba deben proyectarse con $(X-\mu)V_K$, usando la media y las
-        direcciones de entrenamiento.
-  \item \textbf{Cantidad de cálculo en las simulaciones:} en lugar de rotar, proyectar y clasificar el
-        conjunto de prueba en cada una de las 36000 realizaciones, precalculamos las dos predicciones
-        posibles de cada imagen y verificamos que el resultado fuera idéntico.
-  \item \textbf{Interpretación de los resultados:} para darles sentido a los ejes de PCA graficamos las
-        componentes como imágenes y calculamos el cociente de Fisher. Además, tuvimos en cuenta que, con
-        468 imágenes de prueba, una diferencia de 0.01 equivale a unas 5 imágenes.
-\end{itemize}
+Las principales dificultades fueron el tamaño de las matrices, la convergencia numérica y el costo de
+repetir las simulaciones. Las abordamos usando SVD sin construir la covarianza, subiendo el límite de
+iteraciones del ajuste desde las 2000 del ejemplo de la consigna hasta 20000 y dejando documentados los
+siete casos ($K$ entre 218 y 224) que no convergen con ningún límite, cuyo efecto es de como máximo 6
+imágenes sobre 468, y precalculando las dos predicciones posibles por imagen. También mantuvimos
+la separación entre entrenamiento y prueba y distinguimos los patrones visuales de las componentes de
+una interpretación causal. Estas precauciones permiten describir los resultados y sus límites sin
+darles más alcance que el del experimento realizado.
 
-% =====================================================================
 {\small
 \begin{thebibliography}{9}
 \bibitem{mahmood} Mahmood, B. (2016). \emph{How to Predict Yes/No Outcomes Using Logistic Regression}.
   Medium.
 \bibitem{medmnist} Yang, J. et al. (2024). \emph{MedMNIST+}: PneumoniaMNIST ($128\times128$).
 \bibitem{leongarcia} Leon-Garcia, A. (2008). \emph{Probability, Statistics, and Random Processes for
-  Electrical Engineering} (3.ª ed.). Pearson Prentice Hall.
+  Electrical Engineering} (tercera edición). Pearson Prentice Hall.
 \bibitem{teoricas} Material teórico de I206 -- Inferencia y Estimación (2026): \emph{Análisis de componentes
   principales} y \emph{Convergencia -- Monte Carlo}. Universidad de San Andrés.
-\bibitem{sklearn} Pedregosa, F. et al. (2011). Scikit-learn: Machine Learning in Python.
-  \emph{Journal of Machine Learning Research}, 12, 2825--2830.
-\bibitem{numpy} Harris, C. R. et al. (2020). Array programming with NumPy. \emph{Nature}, 585, 357--362.
 \end{thebibliography}
 }
 
