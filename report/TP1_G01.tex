@@ -187,9 +187,6 @@ Figura~\ref{fig:acck} y no cambia los resultados del trabajo de forma importante
 
 Entrenamos con train y medimos el \acc{} sobre las 468 imágenes de test. Cada acierto
 modifica el \acc{} en $1/468\approx0.002$, de modo que una diferencia de 0.01 equivale a unas 5 imágenes.
-El barrido de $K$ sobre test es descriptivo, como solicita la consigna: el máximo observado no es una
-estimación independiente del desempeño de un $K$ seleccionado. Para elegir $K$ para un uso posterior
-habría que validar dentro del conjunto de entrenamiento y reservar test para la evaluación final.
 
 \paragraph{Organización del código.} El código se presenta en un único cuaderno de Jupyter, organizado
 en dos partes correspondientes a los ejercicios 1 y 2. Se definieron funciones para cargar y vectorizar
@@ -275,7 +272,7 @@ de variaciones poco útiles para esta clasificación, aunque para comprobarlo ha
 
 \subsection{Análisis complementario: interpretación de las componentes}
 
-Para entender \emph{por qué} alcanzan pocas componentes, hicimos tres análisis adicionales.
+Para entender por qué alcanzan pocas componentes, hicimos tres análisis adicionales.
 
 \paragraph{Componentes como imágenes.} Cada dirección $v_j$ tiene un peso por píxel, así que puede
 graficarse como una imagen de $128\times128$ (Figura~\ref{fig:comp}; rojo: pesos positivos, azul:
@@ -483,9 +480,7 @@ simulados, el desvío estándar es cercano o inferior a 0.015.
 \subsection{Distribución del accuracy (inciso d)}
 
 La Figura~\ref{fig:hist} muestra los histogramas del \acc{} para $p=0.1$, $0.3$, $0.5$, $0.7$ y $0.9$,
-con 2000 realizaciones por valor. Como el \acc{} solo toma valores de la forma $k/468$, usamos un intervalo centrado en cada valor posible, con ancho $1/468$.
-Así evitamos que algunos intervalos agrupen dos valores posibles y otros queden vacíos, lo que generaría
-huecos artificiales. Las distribuciones tienen forma de campana y están centradas en la media estimada, que
+con 2000 realizaciones por valor. Las distribuciones tienen forma de campana y están centradas en la media estimada, que
 se desplaza hacia la izquierda al crecer $p$. El ancho teórico es máximo en $p=0.5$ y simétrico alrededor de ese
 valor; los histogramas presentan fluctuaciones muestrales: el desvío es 0.009, 0.013, 0.015, 0.013 y 0.009 para $p = 0.1$, $0.3$, $0.5$, $0.7$ y $0.9$. Esto se
 explica con el mismo razonamiento del inciso (b). Solo influyen las 188 imágenes cuya clasificación cambia al
@@ -584,7 +579,7 @@ Las principales dificultades fueron el tamaño de las matrices, la convergencia 
 repetir las simulaciones. Las abordamos usando SVD sin construir la covarianza, subiendo el límite de
 iteraciones del ajuste desde las 2000 del ejemplo de la consigna hasta 20000 y dejando documentados los
 siete casos ($K$ entre 218 y 224) que no convergen con ningún límite, cuyo efecto es de como máximo 6
-imágenes sobre 468, y precalculando las dos predicciones posibles por imagen. También mantuvimos
+imágenes sobre 468. También mantuvimos
 la separación entre entrenamiento y prueba y distinguimos los patrones visuales de las componentes de
 una interpretación causal. Estas precauciones permiten describir los resultados y sus límites sin
 darles más alcance que el del experimento realizado.
